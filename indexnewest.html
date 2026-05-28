@@ -1,0 +1,200 @@
+HTML — INDEX.HTML 
+<!DOCTYPE html> 
+<html lang="id"> 
+<head> 
+  <meta charset="UTF-8"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <meta name="description" 
+        content="Portfolio AI — Kimberly, peserta Workshop UPH"> <title>AI Portfolio — Kimberly</title> 
+  <link rel="stylesheet" href="style.css"> 
+</head> 
+<body>
+
+
+
+<header class="hero"> 
+  <h1>Halo, saya <span class="accent">Kimberly</span></h1> 
+  <p class="subtitle">Siswa SMAK 1 · Workshop FAIDAS UPH, Mei 2026</p> </header> 
+
+<main> 
+  <section id="about" class="card"> 
+     <h2>Tentang Saya</h2> 
+     <p>Saya Kimberly, seorang siswi SMAK 1 yang tertarik dengan teknologi AI. Saya ikut workshop FAIDAS UPH untuk memperdalam pemahaman saya tentang machine learning dan deep learning.</p> 
+  </section> 
+
+
+  <section id="ai-demo" class="card"> 
+     <h2>AI Demo: Pilah sampah mandiri organik vs anorganik</h2> 
+     <p class="hint">Arahkan kamera ke objek untuk klasifikasi real time.</p> 
+     <button id="start-btn" class="btn-primary">Aktifkan Kamera</button> 
+     <div id="webcam-wrapper"> 
+         <div id="webcam-container"></div> 
+         <div id="label-container"></div>
+         
+    <section id="ai-demo" class="card">
+  <p class="hint">Klik tombol untuk menyalakan kamera</p>
+  <div id="webcam-wrapper"></div>
+</section>
+<script>
+  const startBtn = document.getElementById("start-btn");
+  const webcamWrapper = document.getElementById("webcam-wrapper");
+
+  startBtn.addEventListener("click", async () => {
+    try {
+      // Minta izin kamera
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Buat elemen video
+      const video = document.createElement("video");
+      video.srcObject = stream;
+      video.autoplay = true;
+      video.playsInline = true;
+      video.style.maxWidth = "100%";
+      // Masukkan ke wrapper
+      webcamWrapper.innerHTML = ""; // kosongkan dulu
+      webcamWrapper.appendChild(video);
+    } catch (err) {
+      console.error("Tidak bisa akses kamera:", err);
+      webcamWrapper.textContent = "Gagal menyalakan kamera.";
+    }
+  });
+</script>
+ <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+ <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image"></script>
+ <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js">
+
+ </script>
+ <script>
+  const TM_MODEL_URL = "https://teachablemachine.withgoogle.com/models/JhKVVWMMK/";
+
+  let model, webcam, labelContainer, maxPredictions;
+
+  async function init() {
+    // Load model.json dan metadata.json
+    const modelURL = TM_MODEL_URL + "model.json";
+    const metadataURL = TM_MODEL_URL + "metadata.json";
+
+    model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
+
+    // Setup webcam
+    webcam = new tmImage.Webcam(200, 200, true); // width, height, flip
+    await webcam.setup(); // minta izin kamera
+    await webcam.play();
+    window.requestAnimationFrame(loop);
+
+    // Masukkan webcam ke wrapper
+    document.getElementById("webcam-wrapper").appendChild(webcam.canvas);
+
+    // Buat container untuk label prediksi
+    labelContainer = document.createElement("div");
+    document.getElementById("webcam-wrapper").appendChild(labelContainer);
+    for (let i = 0; i < maxPredictions; i++) {
+      labelContainer.appendChild(document.createElement("div"));
+    }
+  }
+
+  async function loop() {
+    webcam.update(); // update frame
+    await predict();
+    window.requestAnimationFrame(loop);
+  }
+
+  async function predict() {
+    const prediction = await model.predict(webcam.canvas);
+    for (let i = 0; i < maxPredictions; i++) {
+      const classPrediction =
+        prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+      labelContainer.childNodes[i].innerHTML = classPrediction;
+    }
+  }
+
+  // Hubungkan tombol
+  document.getElementById("start-btn").addEventListener("click", init);
+</script>
+
+
+
+     </div> 
+     </section> 
+     <section id="ai-chat" class="card">
+  <div class="chat-input-row">
+    <textarea id="prompt-input" rows="2" placeholder="Tulis pertanyaan..."></textarea>
+    <button id="ask-btn">Kirim</button>
+  </div>
+  <div id="answer-box" class="answer-placeholder">Menunggu jawaban…</div>
+</section>
+
+<script>
+const endpoint = "https://api.generativelanguage.googleapis.com/v1beta2/models/gemini-1.5-pro-preview:generateContent?key=AIzaSyAWEvviF8PjF-ok8ymhV-slTTYIbuPga9s";
+
+async function askGemini() {
+  const askBtn = document.getElementById('ask-btn');
+  const input = document.getElementById('prompt-input');
+  const answerBox = document.getElementById('answer-box');
+
+  askBtn.disabled = true;
+  answerBox.textContent = "Loading…";
+
+  const payload = {
+    contents: [{ role: "user", parts: [{ text: input.value }]}]
+  };
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Gemini response:", data);
+
+    const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    answerBox.classList.remove('answer-placeholder');
+    answerBox.textContent = answer ?? "Tidak ada jawaban.";
+  } catch (err) {
+    answerBox.textContent = "Error: " + err.message;
+    console.error(err);
+  } finally {
+    askBtn.disabled = false;
+  }
+}
+
+document.getElementById('ask-btn')
+  .addEventListener('click', askGemini);
+
+document.getElementById('prompt-input')
+  .addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      askGemini();
+    }
+});
+</script>
+
+         </div> 
+    </section> 
+</main> 
+
+
+<footer> 
+  <p>© 2026 Kimberly · 
+     <a href=" https://kimberlyclarabelle-boop.github.io/belajar-html/" 
+         target="_blank">Source Code</a>
+
+  </p> 
+</footer> 
+
+
+<!-- Library AI (dari CDN, tidak perlu download) --> 
+  <script 
+src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js" 
+></script> 
+ <script 
+src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/tea chablemachine-image.min.js"></script> 
+  <script src="script.js"></script> 
+</body> 
+</html>
